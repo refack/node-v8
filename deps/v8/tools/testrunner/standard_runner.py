@@ -33,7 +33,6 @@ MORE_VARIANTS = [
   "stress",
   "stress_background_compile",
   "stress_incremental_marking",
-  "wasm_traps",
 ]
 
 VARIANT_ALIASES = {
@@ -44,7 +43,7 @@ VARIANT_ALIASES = {
   # Shortcut for the two above ("more" first - it has the longer running tests).
   "exhaustive": MORE_VARIANTS + VARIANTS,
   # Additional variants, run on a subset of bots.
-  "extra": ["future", "liftoff", "trusted", "wasm_no_native"],
+  "extra": ["future", "liftoff", "no_wasm_traps", "trusted"],
 }
 
 GC_STRESS_FLAGS = ["--gc-interval=500", "--stress-compaction",
@@ -266,6 +265,7 @@ class StandardTestRunner(base_runner.BaseTestRunner):
 
       variables.update({
         'gc_stress': options.gc_stress or options.random_gc_stress,
+        'gc_fuzzer': options.random_gc_stress,
         'novfp3': options.novfp3,
         'simulator_run': simulator_run,
       })

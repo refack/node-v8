@@ -280,7 +280,7 @@ TF_BUILTIN(NumberParseFloat, CodeStubAssembler) {
 }
 
 // ES6 #sec-number.parseint
-TF_BUILTIN(NumberParseInt, CodeStubAssembler) {
+TF_BUILTIN(ParseInt, CodeStubAssembler) {
   Node* context = Parameter(Descriptor::kContext);
   Node* input = Parameter(Descriptor::kString);
   Node* radix = Parameter(Descriptor::kRadix);
@@ -355,6 +355,14 @@ TF_BUILTIN(NumberParseInt, CodeStubAssembler) {
     Node* result = CallRuntime(Runtime::kStringParseInt, context, input, radix);
     Return(result);
   }
+}
+
+// ES6 #sec-number.parseint
+TF_BUILTIN(NumberParseInt, CodeStubAssembler) {
+  Node* context = Parameter(Descriptor::kContext);
+  Node* input = Parameter(Descriptor::kString);
+  Node* radix = Parameter(Descriptor::kRadix);
+  Return(CallBuiltin(Builtins::kParseInt, context, input, radix));
 }
 
 // ES6 #sec-number.prototype.valueof
@@ -436,13 +444,9 @@ TF_BUILTIN(Add, AddStubAssembler) {
 
       BIND(&if_right_smi);
       {
-        // Try fast Smi addition first, bail out if it overflows.
-        Node* pair = IntPtrAddWithOverflow(BitcastTaggedToWord(left),
-                                           BitcastTaggedToWord(right));
-        Node* overflow = Projection(1, pair);
         Label if_overflow(this);
-        GotoIf(overflow, &if_overflow);
-        Return(BitcastWordToTaggedSigned(Projection(0, pair)));
+        TNode<Smi> result = TrySmiAdd(CAST(left), CAST(right), &if_overflow);
+        Return(result);
 
         BIND(&if_overflow);
         {
@@ -731,12 +735,10 @@ TF_BUILTIN(Subtract, NumberBuiltinsAssembler) {
 
   BIND(&do_smi_sub);
   {
-    // Try a fast Smi subtraction first, bail out if it overflows.
-    Node* pair = IntPtrSubWithOverflow(BitcastTaggedToWord(var_left.value()),
-                                       BitcastTaggedToWord(var_right.value()));
-    Node* overflow = Projection(1, pair);
-    Label if_overflow(this), if_notoverflow(this);
-    Branch(overflow, &if_overflow, &if_notoverflow);
+    Label if_overflow(this);
+    TNode<Smi> result = TrySmiSub(CAST(var_left.value()),
+                                  CAST(var_right.value()), &if_overflow);
+    Return(result);
 
     BIND(&if_overflow);
     {
@@ -744,9 +746,6 @@ TF_BUILTIN(Subtract, NumberBuiltinsAssembler) {
       var_right_double.Bind(SmiToFloat64(var_right.value()));
       Goto(&do_double_sub);
     }
-
-    BIND(&if_notoverflow);
-    Return(BitcastWordToTaggedSigned(Projection(0, pair)));
   }
 
   BIND(&do_double_sub);
